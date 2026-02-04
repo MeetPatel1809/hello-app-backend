@@ -128,9 +128,14 @@ app.get("/api/hello/pdf", async (req, res) => {
     // IMPORTANT
     res.end(pdfBuffer);
   } catch (error) {
-    console.error("PDF error:", error);
-    res.status(500).json({ message: "PDF generation failed" });
+    console.error("PDF ERROR FULL:", error);
+
+    res.status(500).json({
+      message: "PDF generation failed",
+      error: error.message,
+    });
   }
+
 });
 
 app.get("/", (req, res) => {
