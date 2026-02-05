@@ -37,12 +37,13 @@ app.get("/api/hello", async (req, res) => {
   }
 });
 
-/* DOWNLOAD PDF */
+/* PDF (DOWNLOAD OR VIEW) */
 app.get("/api/hello/pdf", async (req, res) => {
   try {
+    const isView = req.query.view === "1";
+
     const data = await Hello.find().sort({ createdAt: -1 });
 
-    // Build HTML table
     const rows = data
       .map(
         (item, index) => `
@@ -103,8 +104,16 @@ app.get("/api/hello/pdf", async (req, res) => {
     `;
 
     const browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      headless: true,
+      executablePath: puppeteer.executablePath(),
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-zygote",
+        "--single-process",
+      ],
     });
 
     const page = await browser.newPage();
@@ -119,23 +128,27 @@ app.get("/api/hello/pdf", async (req, res) => {
 
     res.status(200);
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=hello-data.pdf"
-    );
-    res.setHeader("Content-Length", pdfBuffer.length);
 
-    // IMPORTANT
+    // 🔑 KEY DIFFERENCE
+    if (isView) {
+      res.setHeader("Content-Disposition", "inline");
+    } else {
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=hello-data.pdf"
+      );
+    }
+
+    res.setHeader("Content-Length", pdfBuffer.length);
     res.end(pdfBuffer);
+
   } catch (error) {
     console.error("PDF ERROR FULL:", error);
-
     res.status(500).json({
       message: "PDF generation failed",
       error: error.message,
     });
   }
-
 });
 
 app.get("/", (req, res) => {
