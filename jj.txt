@@ -1,16 +1,19 @@
 #!/bin/bash
 set -e
 
-echo "🏗 Starting Ecom Frontend BUILD ONLY..."
+echo "🚀 Starting Ecom Frontend Deployment..."
 
 REPO_URL="https://github.com/amaansodagar786/ecom_frontend/archive/refs/heads/main.zip"
-
+LIVE_DIR="/var/www/bankcsp.store/dist-new"
 TMP_ZIP="/tmp/ecom_frontend.zip"
 TMP_DIR="/tmp/ecom_frontend"
-OUTPUT_DIR="/var/www/dist-build-output"
+BACKUP_DIR="/var/www/bankcsp.store/dist-new-backup-$(date +%Y-%m-%d-%H%M)"
 
-echo "🧹 Cleaning old temp & output..."
-rm -rf "$TMP_DIR" "$TMP_ZIP" "$OUTPUT_DIR"
+echo "📦 Creating backup..."
+cp -r "$LIVE_DIR" "$BACKUP_DIR"
+
+echo "🧹 Cleaning temp files..."
+rm -rf "$TMP_DIR" "$TMP_ZIP"
 
 echo "⬇️ Downloading source..."
 wget -q -O "$TMP_ZIP" "$REPO_URL"
@@ -27,14 +30,20 @@ npm install --silent
 echo "🏗 Building frontend..."
 npm run build
 
-echo "📁 Creating external dist output..."
-mkdir -p "$OUTPUT_DIR"
-cp -r "$TMP_DIR/dist/"* "$OUTPUT_DIR/"
+echo "♻ Replacing ONLY required files..."
+
+# Replace assets
+rm -rf "$LIVE_DIR/assets"
+cp -r "$TMP_DIR/dist/assets" "$LIVE_DIR/"
+
+# Replace index.html
+cp "$TMP_DIR/dist/index.html" "$LIVE_DIR/index.html"
 
 echo "🧼 Cleaning temp..."
 rm -rf "$TMP_DIR" "$TMP_ZIP"
 
-echo "✅ BUILD completed successfully!"
-echo "📂 Dist available at:"
-echo "➡  $OUTPUT_DIR"
-echo "👉 You can now manually copy files to /var/www as needed"
+echo "🔄 Reloading Nginx..."
+systemctl reload nginx
+
+echo "✅ Frontend deployed successfully!"
+echo "📁 Backup created at: $BACKUP_DIR"
